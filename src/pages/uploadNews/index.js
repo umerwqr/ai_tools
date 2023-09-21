@@ -4,11 +4,19 @@ import { toast } from "react-toastify";
 import { Input, Select, Upload, Button, Form, InputNumber } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import Image from 'next/image'
+import { db } from "@/config/firebase"
 const { Option } = Select;
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { message } from 'antd';
+import { collection, getFirestore, getDocs, addDoc } from "firebase/firestore";
+import { storage } from '@/config/firebase';
+import { getStorage } from "firebase/storage";
+import { serverTimestamp } from 'firebase/firestore';
 
 
 const Index = () => {
+  const storage = getStorage();
+
   const admin = {
     name: "James William",
     first: "James",
@@ -25,24 +33,70 @@ const Index = () => {
   const [form] = Form.useForm();
 
   const [isFormEdited, setIsFormEdited] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); 
+
+  const [ image, setImage] =useState('')
+  const handleImagePreview = (e) => {
+
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result);
+        setImage(file);
+      };
+      reader.readAsDataURL(file);
+      
+    }
+  };
 
   const handleFormChange = () => {
     setIsFormEdited(true);
   };
 
   const handleCategoryChange = (value) => {
-    // You can implement category change logic here
+
   };
 
-  const handleSubmit = (values) => {
-  
-      message.success('News Uploaded');
+  const handleSubmit = async (values) => {
+    if ((values.category && values.discription && values.email && values.firstName && values.lastName && values.phone && values.toolLink) === "") {
+      message.error("Error, Feiled or Feilds are empty")
+      return;
+    }
 
-  
+    try {
 
-    console.log("Form values:", values);
+
+   
+       const imageRef = ref(storage, `/images/ ${image.name}`)
+
+      await uploadBytes(imageRef, image);
+      const imageUrl = await getDownloadURL(imageRef);
+
+      console.log(imageUrl)
+      addDoc(collection(db, 'news'), {
+        discription: values.discription,
+        firstName: values.firstName,
+        category: values.category,
+        lastName: values.lastName,
+        phone: values.phone,
+        imageUrl: imageUrl,
+        toolLink: values.toolLink,
+        joiningDate: serverTimestamp(),
+      })
+      message.success('News successfully Registered');
+
+
+
+
+
+      console.log("Form values:", values);
+    }
+    catch (err) {
+      console.log("thiiiiiiiiiis:", err)
+    }
   };
-  
+
 
 
 
@@ -75,7 +129,7 @@ const Index = () => {
                 First Name
               </label>
               <Form.Item name="firstName">
-                <Input className="px-3 py-2 rounded-sm w-full" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24",  }} />
+                <Input className="px-3 py-2 rounded-sm w-full" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", }} />
               </Form.Item>
             </div>
             <div className="w-full ">
@@ -86,13 +140,13 @@ const Index = () => {
                 Last Name
               </label>
               <Form.Item name="lastName">
-                <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24",  }} />
+                <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", }} />
               </Form.Item>
             </div>
           </div>
-          
+
           <div className="flex w-full sm:flex-row flex-col">
-            
+
             <div className="sm:mr-4 w-full">
               <label
                 htmlFor="email"
@@ -101,7 +155,7 @@ const Index = () => {
                 Email Address
               </label>
               <Form.Item name="email">
-              <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24",  }} />
+                <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", }} />
 
               </Form.Item>
             </div>
@@ -112,58 +166,56 @@ const Index = () => {
               >
                 Phone Number
               </label>
-              <Form.Item  name="phone">
-              <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24",  }} />
+              <Form.Item name="phone">
+                <Input className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", }} />
               </Form.Item>
             </div>
           </div>
-          
+
           <div className="flex items-center w-full sm:flex-row flex-col">
             <div className="sm:mr-4 w-full">
               <label
-                htmlFor="Tool"
+                htmlFor="Tool Link"
                 className="text-[16px] font-normal text-[#777777]"
               >
                 Tool
               </label>
-              <Form.Item name="tool" >
-                <Select onChange={handleCategoryChange}  >
-                  <Option value="tool1" >Tool 1</Option>
-                  <Option value="tool2">Tool 2</Option>
-                </Select>
+              <Form.Item name="toolLink" >
+                <Input className="px-3 py-2" placeholder="http://localhost:3000/" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", }} />
+
               </Form.Item>
             </div>
             <div className="w-full">
               <label
                 htmlFor="Tool"
-                className="text-[16px] font-normal text-[#777777]"
+                className="text-[16px] font-normal "
               >
                 Category
               </label>
-              <Form.Item  name="category">
+              <Form.Item name="category">
                 <Select >
                   {/* Populate options based on selected tool */}
+                  <Option value="Updates" >Updates</Option>
+                  <Option value="Interesting">Interesting</Option>
+                  <Option value="Video" >Video</Option>
+                  <Option value="Podcast">Podcast</Option>
+                  <Option value="Learn" >Learn</Option>
+                  <Option value="Research">Research</Option>
+                  <Option value="Opinion">Opinion</Option>
                 </Select>
               </Form.Item>
             </div>
           </div>
-          
-          <div className="w-full   overflow-hidden">
-          <Form.Item className="w-full " style={{width: "100% !important"}}>
-          <Upload
-            listType="picture-card"
-              className=""
-              style={{ width: "100% !important", height: "100%"}}
-            >
-             <div className="flex flex-col items-center " style={{width: "100% !important"}}>
-                <Image src="/imgs/uploadNews.svg" width={45} height={45} />
-                <h1 className="text-[18px] font-[500] text-black">Browse File</h1>
-                <p className="text-[#777777]">Drag and drop files here</p>
-             </div>
-            </Upload>
-          </Form.Item>
-        </div>
-          
+        
+          <div className="w-full mb-12">
+          {previewImage && <img src={previewImage} alt="Preview" className="my-4 max-w-[200px]" />}
+
+           <div className="hidden"> <input type='file' onChange={handleImagePreview} className='hidden mb-10 ' accept="image/*" id="image-upload" /></div>
+            <label htmlFor="image-upload" className='cursor-pointer bg-blue-500 px-4 py-2 rounded-lg text-white font-semibold'>
+              Select Image
+            </label>
+          </div>
+
           <div className="flex-col items-center">
             <div className="mr-4">
               <label
@@ -172,12 +224,12 @@ const Index = () => {
               >
                 Description
               </label>
-              <Form.Item>
-                <Input.TextArea  className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", resize: "none"  }}  />
+              <Form.Item name="discription" >
+                <Input.TextArea placeholder="Only one line" className="px-3 py-2" style={{ borderColor: "#2668E899", borderRadius: "5px", background: "#B4C7ED24", resize: "none" }} />
               </Form.Item>
             </div>
           </div>
-          
+
           <button
             type="submit"
             className="mt-6 bg-[#2668E8] w-full sm:w-auto text-white py-2 px-4 rounded transition duration-300 hover:bg-blue-700"

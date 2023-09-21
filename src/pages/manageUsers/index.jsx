@@ -1,18 +1,25 @@
 
+import { useState, useEffect } from 'react';
+import { onSnapshot } from 'firebase/firestore';
+import { db } from '@/config/firebase'; // Import your Firebase configuration
 import Head from "next/head";
 import Image from "next/image";
 import { FilterOutlined, SortAscendingOutlined, EyeOutlined, MoreOutlined } from "@ant-design/icons";
 import { Select, Menu, Dropdown, Button, Table, Card, Modal, Checkbox, Pagination } from "antd";
-import { useState, useEffect } from "react";
-import { message } from 'antd';
-const { collection, getFirestore, getDocs } = require("firebase/firestore");
-import { db } from '@/config/firebase';
+import { message} from 'antd';
+import { collection, getFirestore, getDocs } from "firebase/firestore";
 import moment from 'moment';
 import { auth } from '@/config/firebase/';
 import { getAuth, listUsers } from 'firebase/auth';
 import ModifyUserModal from '../../components/ModifyUserModal'
+import firebase from 'firebase/app';
+import 'firebase/firestore'; // Import Firestore module
+import { deleteDoc, doc } from 'firebase/firestore'; // Import Firestore update functions
+
 
 const Index = () => {
+
+  const [users, setUsers] = useState([]);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -22,9 +29,45 @@ const Index = () => {
   const itemsPerPage = 10;
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedTool, setSelectedTool] = useState(null);
-  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "users"), (querySnapshot) => {
+      const userList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(userList);
+    });
 
+    return () => unsubscribe(); // Clean up the listener when component unmounts
+  }, []);
+  const deleteUser = async (userId) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const response = await deleteDoc(userRef);
+      if (response) {
+        message.success("yess Deleted Successfully")
+        console.log(`User with ID ${userId} deleted successfully.`);
+      }
+
+    } catch (error) {
+      message.error("yess Deleted Successfully")
+
+      console.error('Error deleting user:', error);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    console.log("selected", selectedUserId, "here")
+
+    if (selectedUserId) {
+      console.log(selectedUserId)
+      deleteUser(selectedUserId);
+      setSelectedUserId(null); // Reset selected user after deletion
+    }
+    setDeleteModalVisible(false);
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -37,15 +80,15 @@ const Index = () => {
         }));
         setUsers(userList);
       } catch (error) {
-        console.error('Error fetching users:', error ," error end");
+        console.error('Error fetching users:', error, " error end");
       }
     };
     fetchUsers();
-  }, [2]);
+  }, []);
   console.log("all Users", users)
 
   const handleEditModalToggle = (tool) => {
-    setSelectedTool(tool);
+    console.log("toooolss",tool)
     if (tool) {
       const editedTool = {
         ...tool,
@@ -60,11 +103,11 @@ const Index = () => {
   };
 
 
-  const handleDeleteModalToggle = () => {
+  const handleDeleteModalToggle = (userId) => {
     setDeleteModalVisible(!deleteModalVisible);
+    console.log("userrr IDD ", userId)
+    setSelectedUserId(userId);
   };
-
-
 
 
   const data = [
@@ -179,13 +222,13 @@ const Index = () => {
       setCurrentPage(page);
     },
   };
-
-  const paginatedData = data.slice(
+ 
+  const paginatedData = users.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
   const pageOptions = Array.from(
-    { length: Math.ceil(data.length / itemsPerPage) },
+    { length: Math.ceil(users.length / itemsPerPage) },
     (_, i) => ({
       label: `Page ${i + 1}`,
       value: i + 1,
@@ -198,7 +241,7 @@ const Index = () => {
         <Checkbox
           onChange={(e) => {
             if (e.target.checked) {
-              setSelectedRowKeys(data.map((item) => item.id));
+              setSelectedRowKeys(users.map((item) => item.uid));
             } else {
               setSelectedRowKeys([]);
             }
@@ -231,11 +274,11 @@ const Index = () => {
           User Name
         </div>
       ),
-      key: "user",
+      key: "name",
       render: (text, record) => (
         <div className="flex items-center">
-          <Image src={record.img} alt="Tool Image" width={30} height={30} className="mr-2" />
-          <span>{record.user}</span>
+          {/* <Image src={record.img} alt="Tool Image" width={30} height={30} className="mr-2" /> */}
+          <span>{record.name}</span>
         </div>
       ),
     },
@@ -249,6 +292,15 @@ const Index = () => {
       ),
       dataIndex: "joiningDate",
       key: "joiningDate",
+      render: (text, record) => {
+        let sec = record.joiningDate.seconds * 1000; // Convert to milliseconds
+        let normalDate = new Date(sec).toLocaleDateString('en-GB', { timeZone: 'UTC' });
+        return (
+          <div className="flex items-center">
+            <span>{normalDate}</span>
+          </div>
+        )
+      },
     },
     {
       title: (
@@ -258,6 +310,15 @@ const Index = () => {
       ),
       dataIndex: "lastActivity",
       key: "lastActivity",
+      render: (text, record) => {
+        let sec = record.joiningDate.seconds * 1000; // Convert to milliseconds
+        let normalDate = new Date(sec).toLocaleDateString('en-GB', { timeZone: 'UTC' });
+        return (
+          <div className="flex items-center">
+            <span>{normalDate}</span>
+          </div>
+        )
+      },
     },
     {
       title: (
@@ -267,6 +328,12 @@ const Index = () => {
       ),
       dataIndex: "Mode",
       key: "Mode",
+      render: (text, record) => (
+        <div className="flex items-center">
+          {/* <Image src={record.img} alt="Tool Image" width={30} height={30} className="mr-2" /> */}
+          <span>{"Premium"}</span>
+        </div>
+      ),
     },
     {
       title: (
@@ -340,7 +407,7 @@ const Index = () => {
           <Menu.Item key="edit" onClick={() => handleEditModalToggle(record)}>
             Edit
           </Menu.Item>
-          <Menu.Item key="delete" onClick={handleDeleteModalToggle}>
+          <Menu.Item key="delete" onClick={() => handleDeleteModalToggle(record.id)}>
             Delete
           </Menu.Item>
         </Menu>
@@ -390,7 +457,7 @@ const Index = () => {
 
           <div className="px-4 hidden md:block">
             <Table
-              dataSource={data}
+              dataSource={users}
               columns={columns}
               className='table-responsive'
               pagination={false}
@@ -421,16 +488,17 @@ const Index = () => {
       <Modal
         title="Delete User"
         visible={deleteModalVisible}
-        onCancel={handleDeleteModalToggle}
+        onCancel={() => handleDeleteModalToggle(null)} // Reset selected user if modal is closed
         footer={[
-          <Button key="cancel" onClick={handleDeleteModalToggle}>
+          <Button key="cancel" onClick={() => handleDeleteModalToggle(null)}>
             Cancel
           </Button>,
-          <Button key="delete" type="danger" style={{ background: "#F93C51", color: "white" }} onClick={() => {
-            handleDeleteModalToggle();
-            message.success('User Deleted')
-
-          }}>
+          <Button
+            key="delete"
+            type="danger"
+            style={{ background: "#F93C51", color: "white" }}
+            onClick={handleDeleteUser}
+          >
             Yes
           </Button>,
         ]}

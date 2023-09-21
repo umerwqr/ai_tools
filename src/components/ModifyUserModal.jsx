@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Modal, Form, Input, DatePicker, Select, Upload, Button } from 'antd';
 import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import { message } from 'antd';
-const { Option } = Select;
+import { updateDoc, doc } from 'firebase/firestore'; // Import Firestore update functions
+import { db } from '../config/firebase'; // Import your Firebase configuration
 
+const { Option } = Select;
 const ModifyUserModal = ({ visible, onCancel, data }) => {
   const [form] = Form.useForm();
+  const onFinish = async (values) => {
+    console.log("id>>||>>>", values.id  , "thisss");
+    console.log("oooooooobject", values);
+    try {
+      const userRef = doc(db, "users", values.id);
 
-  const onFinish = (values) => {
-    message.success('User Modified');
-    onCancel();
+      // Create an object with only the field(s) you want to update
+      const updatedFields = { name: values.name, joiningDate: values.joiningDate.$d};
+
+      if (Object.keys(updatedFields).length > 0) {
+        await updateDoc(userRef, updatedFields);
+        message.success('User Modified');
+      }
+
+      onCancel();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      message.error("An error occurred while updating the user.");
+    }
   };
 
   return (
@@ -27,9 +44,9 @@ const ModifyUserModal = ({ visible, onCancel, data }) => {
         wrapperCol={{ span: 24 }}
       >
         <Form.Item name="id" label="ID">
-          <Input />
+          <Input  />
         </Form.Item>
-        <Form.Item name="user" label="User">
+        <Form.Item name="name" label="User">
           <Input style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item name="joiningDate" label="Joining Date">

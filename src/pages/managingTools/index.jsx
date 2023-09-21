@@ -5,6 +5,8 @@ import { FilterOutlined, SortAscendingOutlined, EyeOutlined, MoreOutlined   } fr
 import { Select, Menu, Dropdown, Button, Table, Card, Modal } from "antd";
 import { useState, useEffect } from "react";
 import moment from 'moment';
+import {db} from "@/config/firebase"
+import { collection, getDocs } from 'firebase/firestore';
 import ModifyToolModal from '../../components/ModifyToolModal'
 const Index = () => {
 
@@ -12,6 +14,27 @@ const Index = () => {
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [selectedTool, setSelectedTool] = useState(null);
   
+    const[ tools,setTool]=useState(null)
+
+    
+  useEffect(() => {
+    const fetchUsers = async () => {
+      console.log("helloo")
+      try {
+        const querySnapshot = await getDocs(collection(db, "tools"));
+        const toolList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setTool(toolList);
+      } catch (error) {
+        console.error('Error fetching users:', error, " error end");
+      }
+    };
+    fetchUsers();
+  }, []);
+  console.log("all Users", tools)
+
     const handleEditModalToggle = (tool) => {
       setSelectedTool(tool);
       if (tool) {
@@ -166,6 +189,7 @@ const Index = () => {
       ),
       dataIndex: "id",
       key: "id",
+      render: (text, record, index) => index + 1
     },
     {
       title: (
@@ -176,8 +200,8 @@ const Index = () => {
       key: "tooltitle",
       render: (text, record) => (
         <div className="flex items-center">
-          <Image src={record.toolImg} alt="Tool Image" width={30} height={30} className="mr-2" />
-          <span>{record.tooltitle}</span>
+          <img src={record.imageUrl} className=" w-2 h-2" alt="image" />
+          <span>{record.title}</span>
         </div>
       ),
     },
@@ -207,6 +231,15 @@ const Index = () => {
       ),
       dataIndex: "addedDate",
       key: "addedDate",
+      render: (text, record) => {
+        let sec = record.joiningDate.seconds * 1000; // Convert to milliseconds
+        let normalDate = new Date(sec).toLocaleDateString('en-GB', { timeZone: 'UTC' });
+        return (
+          <div className="flex items-center">
+            <span>{normalDate}</span>
+          </div>
+        )
+      },
     },
     {
       title: (
@@ -391,7 +424,7 @@ const Index = () => {
           </div>
 
           <div className="px-4 hidden md:block">
-          <Table dataSource={data} columns={columns} className='table-responsive' pagination={false} />
+          <Table dataSource={tools} columns={columns} className='table-responsive' pagination={false} />
           </div>
 
           <div className=" flex flex-col md:hidden">
