@@ -326,12 +326,12 @@ const Index = () => {
           Mode
         </div>
       ),
-      dataIndex: "Mode",
-      key: "Mode",
+      dataIndex: "mode",
+      key: "mode",
       render: (text, record) => (
         <div className="flex items-center">
           {/* <Image src={record.img} alt="Tool Image" width={30} height={30} className="mr-2" /> */}
-          <span>{"Premium"}</span>
+          <span>{record.mode}</span>
         </div>
       ),
     },
@@ -480,7 +480,7 @@ const Index = () => {
 
       <ModifyUserModal
         visible={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
+        onCancel={() => {setEditModalVisible(false); setSelectedTool(null)}}
         data={selectedTool}
       />
 
